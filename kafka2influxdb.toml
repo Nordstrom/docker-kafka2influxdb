@@ -1,0 +1,102 @@
+# kafka2influxdb configuration
+# by default, you can put it in "/etc/kafka2influxdb/kafka2influxdb.toml"
+
+# will get "batch_size" metrics as a batch from Kafka and push them to
+# influxdb hosts
+# default 5000
+batch_size = 1
+
+# send a batch of metrics to InfluxDB after that duration, even if there are
+# less than batch_size metrics
+# milliseconds, default 60000
+batch_max_duration = 1000
+
+# from which Kafka topics to gather metrics. You can specify a glob.
+# Default "metrics_*"
+topics = ["*-influx-metrics"]
+
+# refresh the matching Kafka topics after that duration
+# milliseconds, default 300000
+refresh_topics = 300000
+
+# specify the format of logs produced by kafka2influxdb. can be 'text' or 'json'.
+# default 'text'
+logformat = "text"
+
+# if some error happens while consuming (kafka not available, influxdb not
+# available, etc), what to do?
+# if retry_delay_ms < 0: abort kafka2influxdb
+# if retry_delay_ms = 0: retry without delay
+# if retry_delay_ms > 0: pause for retry_delay_ms milliseconds, then retry.
+# In next iteration, if some error happens again, the delay will be doubled
+# each time.
+# default: 30000
+retry_delay_ms = 30000
+
+# "mappings" associate Kafka topic names (can be globs) with InfluxDB
+# configurations.
+# - on the left side, specify a Kafka topic glob
+# - on the right side, specify the ID of the matching "topic_conf"
+
+# When a Kafka message will be push to InfluxDB as a measurement, the mappings
+# will be tried in the provided order. So you should specify mappings with
+# a precise glob first, and the default mapping ("*") last.
+
+# You must specify one mapping per [[mapping]] section (TOML syntax...)
+# default mapping: "*" => "default"
+
+[[mapping]]
+"foo-*"  = "foo"
+#[[mapping]]
+#"*"                                  = "default"
+
+# The `topic_conf.default` section specify the default influxdb configuration.
+# You can override the paramaters in further "topic_conf.any" sections
+[topic_conf.foo]
+  host = "http://influxdb:8086"
+  retention_policy = ""
+  dbname = "foo"
+  format = "influx"
+  #auth = true
+  #username = "kafka2influxdb"
+  #password = "CHANGE_ME"
+  #admin_username = "admin"
+  #admin_password = "CHANGE_ME_ADMIN"
+
+  # Whether to create the needed databases in InfluxDB (default false)
+  # If true, you need to provide an admin user
+  # If false, the databases in InfluxDB must be created manually before running kafka2influxdb
+  #create_databases = false
+  # metrics timestamp precision (default "ns")
+  precision = "ns"
+  # connection timeout to InfluxDB (ms, default 5000)
+  timeout = 5000
+
+[topic_conf.default]
+host = "http://influxdb:8086"
+format = "influx"
+
+[kafka]
+  # the list of kafka brokers to connect to (default: ["kafka1", "kafka2", "kafka3"]
+  brokers = ["broker:9092"]
+  # Kafka client ID (default "kafka2influxdb")
+  client_id = "kafka2influxdb"
+  # Kafka consumer group name (default "kafka2influxdb-cg")
+  consumer_group = "kafka2influxdb-cg"
+  # Kafka version (default "0.9.0.0"). We use consumer groups, so 0.9 is required at minimum.
+  version = "0.10.1.1"
+  # The format used to store metrics in Kafka (default "json")
+  # Can be "json" or "influx" (= line protocol). Similar to the same parameter in telegraf.
+  format = "influx"
+
+#[kafka.tls]
+#  enable = false
+#  certificate_authority = ""
+#  certificate = ""
+#  private_key = ""
+#  insecure = false
+
+#[kafka.sasl]
+#  enable = false
+#  username = ""
+#  password = ""
